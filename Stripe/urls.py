@@ -15,4 +15,5 @@ urlpatterns = [
     path(r'^add/(?P<product_id>\d+)/$', cart_views.cart_add, name='cart_add'),
     path(r'^remove/(?P<product_id>\d+)/$', cart_views.cart_remove, name='cart_remove'),
     path('cart/checkout/', cart_views.cart_checkout, name='cart_checkout'),
+    path('stripe-webhook/', cart_views.stripe_webhook, name='stripe-webhook'),
 ]

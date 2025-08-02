@@ -1,11 +1,13 @@
+from django.contrib.auth.models import AnonymousUser
 from django.shortcuts import render, redirect, get_object_or_404
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
-from payment.models import Item
+from payment.models import Item, OrderItem, Order
 from .cart import Cart
 from .forms import CartAddProductForm
 import stripe
 from django.conf import settings
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 
 
 @require_POST
@@ -46,6 +48,20 @@ def cart_checkout(request):
     stripe.api_key = settings.STRIPE_SECRET_KEY
 
     try:
+        order = Order.objects.create(
+            user=None if isinstance(request.user, AnonymousUser) else request.user,
+            total_amount=cart.get_total_price(),
+            is_paid=False
+        )
+
+        for item in cart:
+            OrderItem.objects.create(
+                order=order,
+                product=item['product'],
+                price=item['price'],
+                quantity=item['quantity']
+            )
+
         line_items = []
         for item in cart:
             line_items.append(
@@ -67,9 +83,51 @@ def cart_checkout(request):
             mode='payment',
             success_url=request.build_absolute_uri('/success/'),
             cancel_url=request.build_absolute_uri('/cart/'),
+            metadata={
+                'order_id': order.id
+            }
         )
+
+        order.stripe_session_id = checkout_session.id
+        order.save()
 
         return JsonResponse({'sessionId': checkout_session.id})
 
     except Exception as e:
+        if 'order' in locals():
+            order.delete()
         return JsonResponse({'error': str(e)}, status=400)
+
+
+@csrf_exempt
+def stripe_webhook(request):
+    payload = request.body
+    sig_header = request.META['HTTP_STRIPE_SIGNATURE']
+    event = None
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
+        )
+    except ValueError as e:
+        return HttpResponse(status=400)
+    except stripe.error.SignatureVerificationError as e:
+        return HttpResponse(status=400)
+
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+
+
+        try:
+            order = Order.objects.get(
+                id=session['metadata']['order_id'],
+                stripe_session_id=session['id'],
+                is_paid=False
+            )
+            order.is_paid = True
+            order.save()
+
+        except Order.DoesNotExist:
+            return HttpResponse(status=404)
+
+    return HttpResponse(status=200)
