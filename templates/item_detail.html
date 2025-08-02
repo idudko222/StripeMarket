@@ -8,29 +8,33 @@
     <h1>{{ item.name }}</h1>
     <p>{{ item.description }}</p>
     <p>Price: ${{ item.price }}</p>
-    <button id="buy-button">Купить</button>
-    
+    <button class="buy-button" 
+            data-item-id="{{ item.id }}"
+            data-stripe-key="{{ stripe_publishable_key }}">
+        Купить
+    </button>
 
     <script>
-        const stripe = Stripe('{{ stripe_publishable_key }}');
-        const buyButton = document.getElementById('buy-button');
-        
-        buyButton.addEventListener('click', function() {
-            fetch('/buy/{{ item.id }}', {
-                method: 'GET',
-            })
-            .then(response => response.json())
-            .then(session => {
-                return stripe.redirectToCheckout({ sessionId: session.sessionId });
-            })
-            .then(result => {
-                if (result.error) {
-                    alert(result.error.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
+        document.addEventListener('DOMContentLoaded', function() {
+            const button = document.querySelector('.buy-button');
+            if (button) {
+                button.addEventListener('click', function() {
+                    const itemId = this.getAttribute('data-item-id');
+                    const stripeKey = this.getAttribute('data-stripe-key');
+                    const stripe = Stripe(stripeKey);
+                    
+                    fetch(`/buy/${itemId}`, {
+                        method: 'GET',
+                    })
+                    .then(response => response.json())
+                    .then(session => {
+                        return stripe.redirectToCheckout({ sessionId: session.sessionId });
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+                });
+            }
         });
     </script>
 </body>
