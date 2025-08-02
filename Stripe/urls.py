@@ -8,4 +8,6 @@ urlpatterns = [
     # Для одиночных товаров
     path('item/<int:id>/', views.item_detail, name='item_detail'),
     path('buy/<int:id>/', views.buy_item, name='buy_item'),
+    # list товаров
+    path('items', views.item_list, name='item_list'),
 ]
