@@ -1,20 +1,30 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Products{% endblock %}
+{% block title %}Товары{% endblock %}
+{% block extra_css %}
+<link href="{% static 'css/item_list.css' %}" rel="stylesheet">
+{% endblock %}
 {% block content %}
-    <div id="main" class="product-list">
+    <h1 class="page-title">Наши товары</h1>
+    <div class="product-grid">
         {% for item in items %}
-            <div class="item">
-                <h1>{{ item.name }}</h1>
-                <div class="item-description">{{ item.description }}</div>
-                <div class="item-price">{{ item.price }} ₽</div>
-                <a href="{% url 'item_detail' item.id %}">View Details</a>
-                <button class="buy-button"
-                        data-item-id="{{ item.id }}"
-                        data-stripe-key="{{ stripe_publishable_key }}">
-                    Купить
-                </button>
-                {{ stripe_publishable_key }}
+            <div class="product-card">
+                <h2 class="product-title">{{ item.name }}</h2>
+                <div class="product-description">{{ item.description }}</div>
+                <div class="product-price">{{ item.price }} ₽</div>
+                <div class="product-actions">
+                    <a href="{% url 'item_detail' item.id %}" class="button light">Подробнее</a>
+                    <form action="{% url 'cart_add' item.id %}" method="post" class="add-to-cart-form">
+                        {{ cart_product_form }}
+                        {% csrf_token %}
+                        <button type="submit" class="button">В корзину</button>
+                    </form>
+                    <button class="button buy-button"
+                            data-item-id="{{ item.id }}"
+                            data-stripe-key="{{ stripe_publishable_key }}">
+                        Купить сейчас
+                    </button>
+                </div>
             </div>
         {% endfor %}
     </div>
@@ -22,13 +32,11 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const buyButtons = document.querySelectorAll('.buy-button');
-
             buyButtons.forEach(button => {
                 button.addEventListener('click', function () {
                     const itemId = this.getAttribute('data-item-id');
                     const stripeKey = this.getAttribute('data-stripe-key');
                     const stripe = Stripe(stripeKey);
-
                     fetch(`/buy/${itemId}`, {
                         method: 'GET',
                     })

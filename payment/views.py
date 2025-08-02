@@ -3,16 +3,19 @@ from .models import Item
 import stripe
 from django.conf import settings
 from django.http import JsonResponse
+from cart.forms import CartAddProductForm
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
 def item_detail(request, id):
     item = get_object_or_404(Item, id=id)
+    cart_product_form = CartAddProductForm()
     return render(
         request, 'item_detail.html', {
             'item': item,
-            'stripe_publishable_key': settings.STRIPE_PUBLISHABLE_KEY
+            'stripe_publishable_key': settings.STRIPE_PUBLISHABLE_KEY,
+            'cart_product_form': cart_product_form,
         }
     )
 
@@ -46,9 +49,11 @@ def buy_item(request, id):
 
 def item_list(request):
     items = Item.objects.all()
+    cart_product_form = CartAddProductForm()
     return render(
         request, 'item_list.html', {
             'items': items,
             'stripe_publishable_key': settings.STRIPE_PUBLISHABLE_KEY,
+            'cart_product_form': cart_product_form,
         }
         )

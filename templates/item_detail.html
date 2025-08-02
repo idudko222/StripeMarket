@@ -1,19 +1,39 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>{{ item.name }}</title>
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ item.name }}{% endblock %}
+{% block extra_css %}
+<link href="{% static 'css/item_detail.css' %}" rel="stylesheet">
+{% endblock %}
+{% block content %}
+    <div class="product-detail">
+        <div class="product-image">
+            <div class="image-placeholder"></div>
+        </div>
+        <div class="product-info">
+            <h1>{{ item.name }}</h1>
+            <div class="product-meta">
+                <span class="price">{{ item.price }} ₽</span>
+            </div>
+            <div class="product-description">
+                <h3>Описание</h3>
+                <p>{{ item.description }}</p>
+            </div>
+            <div class="product-actions">
+                <form action="{% url 'cart_add' item.id %}" method="post">
+                    {{ cart_product_form }}
+                    {% csrf_token %}
+                    <button type="submit" class="button">Добавить в корзину</button>
+                </form>
+                <button class="button buy-button" 
+                        data-item-id="{{ item.id }}"
+                        data-stripe-key="{{ stripe_publishable_key }}">
+                    Купить сейчас
+                </button>
+                <a href="{% url 'item_list' %}" class="button light">Назад к каталогу</a>
+            </div>
+        </div>
+    </div>
     <script src="https://js.stripe.com/v3/"></script>
-</head>
-<body>
-    <h1>{{ item.name }}</h1>
-    <p>{{ item.description }}</p>
-    <p>Price: ${{ item.price }}</p>
-    <button class="buy-button" 
-            data-item-id="{{ item.id }}"
-            data-stripe-key="{{ stripe_publishable_key }}">
-        Купить
-    </button>
-
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const button = document.querySelector('.buy-button');
@@ -37,5 +57,4 @@
             }
         });
     </script>
-</body>
-</html>
+{% endblock %}

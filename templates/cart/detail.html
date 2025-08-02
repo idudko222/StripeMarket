@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Ваша корзина{% endblock %}
+{% block extra_css %}
+<link href="{% static 'css/cart.css' %}" rel="stylesheet">
+{% endblock %}
+{% block content %}
+    <h1 class="page-title">Ваша корзина</h1>
+    {% if cart %}
+        <div class="cart-container">
+            <table class="cart-table">
+                <thead>
+                    <tr>
+                        <th>Товар</th>
+                        <th>Количество</th>
+                        <th>Цена</th>
+                        <th>Итого</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in cart %}
+                        {% with product=item.product %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'item_detail' product.id %}" class="product-link">
+                                        {{ product.name }}
+                                    </a>
+                                </td>
+                                <td>{{ item.quantity }}</td>
+                                <td>{{ item.price }} ₽</td>
+                                <td>{{ item.total_price }} ₽</td>
+                                <td>
+                                    <a href="{% url 'cart_remove' product.id %}" class="remove-link">
+                                        Удалить
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endwith %}
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="total-row">
+                        <td colspan="3">Всего</td>
+                        <td colspan="2">{{ cart.get_total_price }} ₽</td>
+                    </tr>
+                </tfoot>
+            </table>
+            <div class="cart-actions">
+                <a href="{% url 'item_list' %}" class="button light">Продолжить покупки</a>
+                <button id="checkout-button" class="button">Оформить заказ</button>
+            </div>
+        </div>
+    {% else %}
+        <div class="empty-cart">
+            <p>Ваша корзина пуста</p>
+            <a href="{% url 'item_list' %}" class="button">Начать покупки</a>
+        </div>
+    {% endif %}
+    <script src="https://js.stripe.com/v3/"></script>
+    <script>
+        const stripe = Stripe('{{ stripe_publishable_key }}');
+        const checkoutButton = document.getElementById('checkout-button');
+        if (checkoutButton) {
+            checkoutButton.addEventListener('click', function () {
+                fetch('{% url "cart_checkout" %}', {
+                    method: 'GET',
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            alert(data.error);
+                            return;
+                        }
+                        return stripe.redirectToCheckout({sessionId: data.sessionId});
+                    })
+                    .then(result => {
+                        if (result.error) {
+                            alert(result.error.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            });
+        }
+    </script>
+{% endblock %}
